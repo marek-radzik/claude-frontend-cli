@@ -1,7 +1,7 @@
 {
   "name": "claude-frontend-cli",
   "version": "0.2.0",
-  "description": "Firmowy installer konfiguracji Claude Code dla projektów frontend (Nuxt/Vue/TS) — docs, skille, agent, settings i CLAUDE.md z jednej komendy.",
+  "description": "Company installer for Claude Code config in frontend projects — pick a stack (Nuxt/Vue, React/Next, generic), scaffold docs, skills, agent, MCP servers, env-based secrets and CLAUDE.md in one command, with safe merge into existing setups.",
   "type": "module",
   "bin": {
     "cfc": "./dist/index.js"

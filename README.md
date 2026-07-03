@@ -63,7 +63,7 @@ dokładane są brakujące pliki, a do `CLAUDE.md` dopisywana jest zarządzana se
 | `cfc get --type <t> --name <n>` | Dołóż pojedynczy artefakt (np. skill) później |
 | `cfc sync` | Zaktualizuj zainstalowane do nowszej wersji kitu (zachowuje lokalne edycje) |
 | `cfc list` | Katalog artefaktów + oznaczenie co jest zainstalowane |
-| `cfc doctor` | Diagnostyka: narzędzie, skrypty npm, drift, wersja kitu |
+| `cfc doctor` | Diagnostyka: narzędzie, skrypty npm, integralność sentineli, drift, wymagane sekrety env (`✓/✗`), wersja kitu |
 
 ### Przykłady
 
@@ -172,8 +172,9 @@ export $(grep -v '^#' .env | xargs)
 | `{{BRANCH_PREFIX}}` | Prefix brancha/commita |
 | `{{JIRA_PROJECT}}`, `{{JIRA_BASE}}`, … | Konfiguracja Jira (moduł `--with-jira`) |
 
-Odpowiedzi zapisują się w `.claude/.cfc-manifest.json` — `sync`/`get` renderują szablony bez ponownego pytania.
-Wartości pochodne (`PROJECT_SLUG`, `PROJECT_ENV_PREFIX`, `PRIMARY_ENTITY_LOWER`) liczone są automatycznie.
+Odpowiedzi (oraz wybrany `stack` i włączone moduły) zapisują się w `.claude/.cfc-manifest.json` — `sync`/`get`
+renderują szablony bez ponownego pytania. Wartości pochodne (`PROJECT_SLUG`, `PROJECT_ENV_PREFIX`,
+`PRIMARY_ENTITY_LOWER`) liczone są automatycznie. **Sekrety nie są placeholderami** — idą wyłącznie do `.env`.
 
 ## Aktualizacja
 
@@ -187,12 +188,15 @@ cfc doctor           # potwierdź spójność
 
 ## Rozszerzanie kitu
 
-1. Dodaj plik do `content/` (np. `content/skills/core/moj-skill/SKILL.md`).
-2. Dopisz wpis w `manifest.json` (`id`, `type`, `layer`, `strategy`, ścieżki).
-3. `npm run build && npm test`.
+- **Nowy skill/doc:** dodaj plik do `content/` (np. `content/skills/core/moj-skill/SKILL.md`) + wpis w `manifest.json`
+  (`id`, `type`, `layer`, `strategy`, ścieżki), potem `npm run build && npm test`.
+- **Nowy stack** (np. Svelte, Solid): jeden wpis w sekcji `stacks` (`label`, `excludeDocs`, `excludeSkills`,
+  `libraries`, `techTable`).
+- **Nowy sekret/token:** wpis w `envKeys` (`key`, `group`, `required`, `comment`) — trafi do `.env.example`
+  w odpowiedniej sekcji.
 
-Placeholdery w treści (`{{...}}`) i strategie (`copy`, `template`, `template-once`, `skip-if-exists`,
-`rules-block`) są opisane w `manifest.json`.
+Strategie artefaktów (w `manifest.json`): `copy`, `template`, `template-once`, `skip-if-exists`, `rules-block`
+(blok w CLAUDE.md), `env-file` (generowany `.env.example`).
 
 ## Skille CLI: `cfc-setup` i `cfc-guide`
 
@@ -205,7 +209,7 @@ Placeholdery w treści (`{{...}}`) i strategie (`copy`, `template`, `template-on
 
 ```bash
 npm run build      # tsup → dist/
-npm test           # vitest (sentinel, template, writer)
+npm test           # vitest (sentinel, template, writer, stack/mcp/env + brak-sekretów)
 npm run lint       # oxlint
 npm run typecheck  # tsc --noEmit
 ```
