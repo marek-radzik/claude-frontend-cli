@@ -1,0 +1,161 @@
+{
+  "$comment": "Declarative catalog of everything claude-frontend-cli (cfc) can install. The CLI reads this, filters by layer/flags, and applies each artifact via its strategy. Add a file to content/ + an entry here to extend the kit.",
+  "version": 1,
+  "kitRepo": "your-org/claude-frontend-cli",
+  "placeholders": [
+    {
+      "key": "PROJECT_NAME",
+      "prompt": "Project name",
+      "default": "My Frontend App",
+      "group": "core"
+    },
+    {
+      "key": "API_BASE_URL",
+      "prompt": "Backend API base URL",
+      "default": "https://api.example.com",
+      "group": "core"
+    },
+    {
+      "key": "PRIMARY_ENTITY",
+      "prompt": "Primary domain entity (singular, e.g. Order)",
+      "default": "Entity",
+      "group": "core"
+    },
+    {
+      "key": "BRANCH_PREFIX",
+      "prompt": "Branch / commit-message prefix (e.g. ACME)",
+      "default": "TASK",
+      "group": "core"
+    },
+    {
+      "key": "JIRA_PROJECT",
+      "prompt": "Jira project key",
+      "default": "PROJ",
+      "group": "jira"
+    },
+    {
+      "key": "JIRA_BASE",
+      "prompt": "Jira base URL",
+      "default": "https://your-org.atlassian.net",
+      "group": "jira"
+    },
+    {
+      "key": "JIRA_BOARD",
+      "prompt": "Jira board id",
+      "default": "1",
+      "group": "jira"
+    },
+    {
+      "key": "JIRA_USER_NAME",
+      "prompt": "Your display name in Jira (assignee)",
+      "default": "Me",
+      "group": "jira"
+    },
+    {
+      "key": "GITLAB_URL",
+      "prompt": "GitLab base URL",
+      "default": "https://gitlab.example.com",
+      "group": "jira"
+    },
+    {
+      "key": "GITLAB_BACKEND_PATH",
+      "prompt": "GitLab backend repo path (group/repo)",
+      "default": "group/backend",
+      "group": "jira"
+    },
+    {
+      "key": "STAGING_HOST",
+      "prompt": "Staging/test server host",
+      "default": "staging.example.com",
+      "group": "jira"
+    }
+  ],
+  "derived": {
+    "PRIMARY_ENTITY_LOWER": "lower(PRIMARY_ENTITY)",
+    "PROJECT_SLUG": "kebab(PROJECT_NAME)",
+    "PROJECT_ENV_PREFIX": "upperSnake(PROJECT_NAME)",
+    "KIT_REPO": "kitRepo"
+  },
+  "artifacts": [
+    {
+      "id": "docs",
+      "type": "doc",
+      "layer": "generic",
+      "strategy": "copy",
+      "srcDir": "content/docs",
+      "destDir": ".docs",
+      "glob": "*.md"
+    },
+    {
+      "id": "agent-vue-quality-enforcer",
+      "type": "agent",
+      "layer": "generic",
+      "strategy": "copy",
+      "src": "content/agents/vue-quality-enforcer.md",
+      "dest": ".claude/agents/vue-quality-enforcer.md"
+    },
+    {
+      "id": "settings",
+      "type": "settings",
+      "layer": "generic",
+      "strategy": "skip-if-exists",
+      "src": "content/settings/settings.json",
+      "dest": ".claude/settings.json"
+    },
+    {
+      "id": "skills-core",
+      "type": "skill",
+      "layer": "generic",
+      "strategy": "template",
+      "srcDir": "content/skills/core",
+      "destDir": ".claude/skills",
+      "glob": "*/SKILL.md"
+    },
+    {
+      "id": "claude-md",
+      "type": "rules",
+      "layer": "generic",
+      "strategy": "rules-block",
+      "blockSrc": "content/rules/CLAUDE.block.md.tmpl",
+      "fullSrc": "content/rules/CLAUDE.full.md.tmpl",
+      "dest": "CLAUDE.md"
+    },
+    {
+      "id": "cfc-guide",
+      "type": "skill",
+      "layer": "generic",
+      "strategy": "copy",
+      "src": "skills/cfc-guide/SKILL.md",
+      "dest": ".claude/skills/cfc-guide/SKILL.md"
+    },
+    {
+      "id": "instructions",
+      "type": "instruction",
+      "layer": "template",
+      "strategy": "template-once",
+      "srcDir": "content/instructions",
+      "destDir": ".instructions",
+      "glob": "*.md"
+    },
+    {
+      "id": "skills-jira",
+      "type": "skill",
+      "layer": "optional",
+      "module": "jira",
+      "strategy": "template",
+      "srcDir": "content/skills/jira",
+      "destDir": ".claude/skills",
+      "glob": "*/SKILL.md"
+    },
+    {
+      "id": "jira-tasks-script",
+      "type": "script",
+      "layer": "optional",
+      "module": "jira",
+      "strategy": "template",
+      "executable": true,
+      "src": "content/skills/jira/jira-tasks.sh",
+      "dest": ".claude/scripts/jira-tasks.sh"
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+## 📚 Claude Code Configuration ({{PROJECT_NAME}})
+
+> This section is managed by [`claude-frontend-cli`](https://github.com/{{KIT_REPO}}) (`cfc`).
+> Edit outside the `BEGIN/END claude-frontend-cli` markers; run `cfc sync` to update.
+
+### Core Stack Documentation (`.docs/`)
+
+Generic, reusable guides for the Nuxt 3 / Vue 3 / TypeScript stack:
+
+{{DOCS_TABLE}}
+
+### Project-Specific Instructions (`.instructions/`)
+
+Business logic and customizations for this project. See [.instructions/](./.instructions/).
+
+### Claude Code Skills
+
+Project skills live in `.claude/skills/<name>/SKILL.md` and are tracked in git — every developer
+gets them after `git pull`. Run manually via `/<name>` or let Claude auto-invoke by task match.
+
+{{SKILLS_TABLE}}
+
+---
+
+## 🎯 Core Principles
+
+### 1. TDD — NON-NEGOTIABLE
+`RED → GREEN → REFACTOR`. Never write code before a failing test. Keep coverage ≥80%. All tests pass before commit.
+→ See [.docs/TDD.md](./.docs/TDD.md)
+
+### 2. Layered Architecture — STRICT
+`Component → Composable → Store ⇄ Repository → API`. Never skip layers; each layer has one responsibility.
+→ See [.docs/ARCHITECTURE.md](./.docs/ARCHITECTURE.md)
+
+### 3. Permission-Based Access — 2-LEVEL
+Page level via `definePageMeta({ middleware: 'permission', permissions: ['resource.action'] })`
+and component level via `v-if="hasPermission('resource.action')"`.
+→ See [.docs/PERMISSIONS.md](./.docs/PERMISSIONS.md)
+
+---
+
+## 📋 Essential Rules
+
+- **ESLint / TypeScript — zero tolerance**: no `any`, no unused vars, strict mode. Run `npm run lint` before commit.
+- **i18n everything**: never hardcode user-facing text — always `t('key')`. → [.docs/I18N.md](./.docs/I18N.md)
+- **Error handling**: never `useToast()` directly — always `useToaster()`. Handle loading/empty/error states.
+  → [.docs/ERROR-HANDLING.md](./.docs/ERROR-HANDLING.md)
+- **Forms**: PrimeVue + Zod + vee-validate. → [.docs/FORMS.md](./.docs/FORMS.md)
+- **Tables & filters**: no currency symbols in filter inputs; currency uses min-max range; MultiSelect values
+  are plain arrays. → [.docs/TABLES.md](./.docs/TABLES.md)
+
+---
+
+## ✅ Pre-Commit Checklist
+
+- [ ] Tests written first (TDD), all pass, coverage ≥80%
+- [ ] `npm run type-check` — no errors; ESLint + Stylelint pass
+- [ ] Page + component permissions set
+- [ ] Error / loading / empty states handled
+- [ ] i18n keys added (no hardcoded text)
