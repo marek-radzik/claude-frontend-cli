@@ -190,7 +190,7 @@ case "$cmd" in
     echo "$RESULT" | jq -r '.issues[]? | "- **\(.key)**: \(.fields.summary) [\(.fields.status.name)] (\(.fields.priority.name))"'
     ;;
 
-  {{JIRA_PROJECT}}-*|nglt-*)
+  {{JIRA_PROJECT}}-*|*-[0-9]*)
     TICKET="${cmd^^}"
     echo "## ${TICKET} — Szczegóły"
     echo ""

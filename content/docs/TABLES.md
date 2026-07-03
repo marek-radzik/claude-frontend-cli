@@ -1221,7 +1221,7 @@ const correctFilterParamName = (paramName: string | null): string | null => {
 }
 ```
 
-**Success Story: Contractors Table (NGLT-257)**
+**Success Story: Contractors Table**
 
 The contractors table (`src/pages/contractors/index.vue`) serves as an excellent example of a **fully compliant implementation** with 33 filterable columns that require NO corrections:
 
@@ -1494,7 +1494,7 @@ const handleColumnOptionsClear = (payload: { columnKey: string }) => {
 
 ##### Common Bug: Filter Not Cleared When MultiSelect is Empty
 
-**Bug Description (Fixed in NGLT-740):**
+**Bug Description (Fixed):**
 When users unchecked all items in a MultiSelect filter and clicked Apply, the filter parameter retained old values instead of being cleared from the API request.
 
 **Root Cause:**
