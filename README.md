@@ -18,14 +18,14 @@ Trzy kanały:
 
 ```bash
 # 1. Zero-install (prosto z gita)
-npx github:your-org/claude-frontend-cli init
+npx github:marek-radzik/claude-frontend-cli init
 
 # 2. Globalnie z npm
 npm i -g claude-frontend-cli
 cfc init
 
 # 3. Dewelopersko (praca nad samym kitem)
-git clone https://github.com/your-org/claude-frontend-cli
+git clone https://github.com/marek-radzik/claude-frontend-cli
 cd claude-frontend-cli && npm install && npm run build && npm link
 ```
 

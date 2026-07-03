@@ -1,7 +1,7 @@
 {
   "$comment": "Declarative catalog of everything claude-frontend-cli (cfc) can install. The CLI reads this, filters by layer/flags, and applies each artifact via its strategy. Add a file to content/ + an entry here to extend the kit.",
   "version": 1,
-  "kitRepo": "your-org/claude-frontend-cli",
+  "kitRepo": "marek-radzik/claude-frontend-cli",
   "placeholders": [
     {
       "key": "PROJECT_NAME",
