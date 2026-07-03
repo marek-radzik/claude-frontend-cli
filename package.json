@@ -1,6 +1,6 @@
 {
   "name": "claude-frontend-cli",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Company installer for Claude Code config in frontend projects — pick a stack (Nuxt/Vue, React/Next, generic), scaffold docs, skills, agent, MCP servers, env-based secrets and CLAUDE.md in one command, with safe merge into existing setups.",
   "type": "module",
   "bin": {
@@ -9,7 +9,8 @@
   "files": [
     "dist",
     "content",
-    "skills"
+    "skills",
+    "manifest.json"
   ],
   "engines": {
     "node": ">=20"
@@ -22,6 +23,7 @@
     "test:watch": "vitest",
     "lint": "oxlint src",
     "typecheck": "tsc --noEmit",
+    "prepare": "npm run build",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

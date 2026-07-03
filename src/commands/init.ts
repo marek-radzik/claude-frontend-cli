@@ -11,7 +11,7 @@ import { readKitManifest } from "../lib/manifest.js";
 import { collectStack, collectVars } from "../lib/prompts.js";
 import { readSavedVars, readSavedStack } from "../lib/config.js";
 import { runApply } from "../lib/apply-run.js";
-import { heading, info, success, warn } from "../lib/output.js";
+import { heading, info, success, warn, error } from "../lib/output.js";
 import { getProfile } from "../lib/tool-profile.js";
 import { printEnvSteps } from "../lib/env-steps.js";
 
@@ -22,6 +22,15 @@ export async function initCommand(args: ParsedArgs, projectRoot: string): Promis
   const dryRun = Boolean(args.flags["dry-run"]);
   const force = Boolean(args.flags.force);
   const yes = Boolean(args.flags.yes);
+
+  // Interactive prompts need a TTY. In non-interactive contexts (CI, piped,
+  // the cfc-setup skill) the caller must pass --yes (+ optional --set / --stack).
+  if (!yes && !process.stdin.isTTY) {
+    error("Interactive init needs a TTY. Re-run non-interactively, e.g.:");
+    info('  cfc init --yes --stack nuxt-vue --set PROJECT_NAME="My App" --set API_BASE_URL=https://api.example.com');
+    process.exitCode = 1;
+    return;
+  }
 
   const state = detectProject(projectRoot, toolId);
   const profile = getProfile(toolId);

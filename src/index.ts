@@ -74,12 +74,14 @@ Options:
 async function main(): Promise<void> {
   const args = parse(process.argv.slice(2));
 
-  if (args.flags.help || args.flags.h || args.command === "help") {
-    info(HELP);
-    return;
-  }
+  // Version first — otherwise `cfc --version` (command defaults to "help") would
+  // print help instead of the version.
   if (args.flags.version || args.flags.v || args.command === "version") {
     info(KIT_VERSION);
+    return;
+  }
+  if (args.flags.help || args.flags.h || args.command === "help") {
+    info(HELP);
     return;
   }
 
