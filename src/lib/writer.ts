@@ -25,11 +25,13 @@ import { kitPath } from "./paths.js";
 import { render, type TemplateVars } from "./template.js";
 import { applyRulesBlockWithMarkers } from "./sentinel.js";
 import { getProfile } from "./tool-profile.js";
+import { getStack, techTableMarkdown, librariesJson } from "./stack.js";
 import type { ConflictResolver } from "./conflict-prompt.js";
 import {
   contentHash,
   KIT_VERSION,
   type Artifact,
+  type EnvKey,
   type InstalledFile,
   type InstallManifest,
   type KitManifest,
@@ -61,6 +63,8 @@ export interface WriteOptions {
   onlyArtifactIds?: string[];
   /** File-level selection for `get` (by artifact type and/or artifact name). */
   select?: { type?: string; name?: string };
+  /** Selected frontend stack id (gates docs/skills, tech table, MCP libraries). */
+  stack?: string;
   dryRun: boolean;
   force: boolean;
   resolver: ConflictResolver;
@@ -159,6 +163,22 @@ function matchesSelect(rf: ResolvedFile, select: { type?: string; name?: string 
   return true;
 }
 
+/** True when the selected stack excludes this doc/skill. */
+function isExcludedByStack(
+  rf: ResolvedFile,
+  excludeDocs: Set<string>,
+  excludeSkills: Set<string>,
+): boolean {
+  if (rf.type === "doc") {
+    const name = (rf.destRel.split("/").pop() as string).replace(/\.md$/, "");
+    return excludeDocs.has(name);
+  }
+  if (rf.type === "skill" && rf.destRel.endsWith("SKILL.md")) {
+    return excludeSkills.has(fileName(rf));
+  }
+  return false;
+}
+
 // ---------------------------------------------------------------------------
 // CLAUDE.md rules-block generation
 // ---------------------------------------------------------------------------
@@ -227,6 +247,18 @@ export async function applyArtifacts(
 
   const selecting = Boolean(options.select && (options.select.name || options.select.type));
 
+  // Stack preset drives gating (excluded docs/skills), the CLAUDE.md tech table,
+  // and the .mcp.json library list. Its values are exposed as extra render vars.
+  const stack = getStack(kit, options.stack);
+  const renderVars: TemplateVars = {
+    ...vars,
+    STACK_LABEL: stack.label,
+    TECH_TABLE: techTableMarkdown(stack),
+    MCP_LIBRARIES_JSON: librariesJson(stack),
+  };
+  const excludeDocs = new Set(stack.excludeDocs);
+  const excludeSkills = new Set(stack.excludeSkills);
+
   // Filter artifacts by layer/module/onlyIds. When file-level selecting, keep
   // all layers as candidates (so `get` can pull an optional skill directly).
   const artifacts = kit.artifacts.filter((a) => {
@@ -238,19 +270,24 @@ export async function applyArtifacts(
 
   // Expand the flat file list once (needed for CLAUDE.md tables too).
   const rulesArtifacts = artifacts.filter(
-    (a) =>
-      a.strategy === "rules-block" &&
-      (!selecting || options.select?.type === "rules"),
+    (a) => a.strategy === "rules-block" && (!selecting || options.select?.type === "rules"),
   );
-  const fileArtifacts = artifacts.filter((a) => a.strategy !== "rules-block");
+  const envArtifacts = artifacts.filter(
+    (a) => a.strategy === "env-file" && (!selecting || options.select?.type === "env"),
+  );
+  const fileArtifacts = artifacts.filter(
+    (a) => a.strategy !== "rules-block" && a.strategy !== "env-file",
+  );
   let allFiles = fileArtifacts.flatMap(expandArtifact);
+  // Stack gating: drop docs/skills excluded by the selected stack.
+  allFiles = allFiles.filter((rf) => !isExcludedByStack(rf, excludeDocs, excludeSkills));
   if (selecting) allFiles = allFiles.filter((rf) => matchesSelect(rf, options.select as object));
 
   // ---- normal files ----
   for (const rf of allFiles) {
     const res = await applyFile(rf, {
       projectRoot,
-      vars,
+      vars: renderVars,
       dryRun,
       force,
       resolver,
@@ -260,11 +297,23 @@ export async function applyArtifacts(
     results.push(res);
   }
 
+  // ---- env file (.env.example, generated from envKeys) ----
+  for (const a of envArtifacts) {
+    const res = applyEnvArtifact(a, kit, modules, {
+      projectRoot,
+      vars: renderVars,
+      dryRun,
+      force,
+      nextFiles,
+    });
+    if (res) results.push(res);
+  }
+
   // ---- rules-block (CLAUDE.md) ----
   for (const a of rulesArtifacts) {
     const res = applyRulesArtifact(a, allFiles, {
       projectRoot,
-      vars,
+      vars: renderVars,
       dryRun,
       priorMap,
       nextFiles,
@@ -317,12 +366,109 @@ export async function applyArtifacts(
   const manifest: InstallManifest = {
     kitVersion: KIT_VERSION,
     installedAt: prior?.installedAt ?? null, // stamped by the command layer
-    vars: { ...prior?.vars, ...stripDerived(vars) },
+    vars: {
+      ...prior?.vars,
+      ...stripDerived(vars),
+      STACK: options.stack ?? prior?.vars?.STACK ?? stack.id,
+    },
     modules: [...installedModules].sort(),
     files: [...nextFiles.values()].sort((a, b) => a.path.localeCompare(b.path)),
   };
 
   return { results, manifest };
+}
+
+// ---------------------------------------------------------------------------
+// .env.example generation (all secrets live in env, never in files)
+// ---------------------------------------------------------------------------
+
+interface EnvCtx {
+  projectRoot: string;
+  vars: TemplateVars;
+  dryRun: boolean;
+  force: boolean;
+  nextFiles: Map<string, InstalledFile>;
+}
+
+/** Which env groups are active given the enabled modules. */
+function envGroupEnabled(group: EnvKey["group"], modules: string[]): boolean {
+  if (group === "git" || group === "project") return true; // always offered (optional)
+  if (group === "mcp") return modules.includes("mcp");
+  if (group === "jira") return modules.includes("jira");
+  return false;
+}
+
+const ENV_GROUP_ORDER: EnvKey["group"][] = ["mcp", "git", "project", "jira"];
+const ENV_GROUP_HEADING: Record<EnvKey["group"], string> = {
+  mcp: "# ── REQUIRED ──",
+  git: "# ── OPTIONAL: git host token ──",
+  project: "# ── OPTIONAL: project API / E2E (add when needed) ──",
+  jira: "# ── JIRA module ──",
+};
+
+export function buildEnvExample(
+  envKeys: EnvKey[],
+  modules: string[],
+  vars: TemplateVars,
+): string {
+  const lines: string[] = [
+    "# ── START: copy & fill in, then export (do NOT commit .env) ──",
+    "#   cp .env.example .env",
+    "#   # edit .env and paste your values",
+    "#   export $(grep -v '^#' .env | xargs)",
+    "",
+  ];
+  for (const group of ENV_GROUP_ORDER) {
+    if (!envGroupEnabled(group, modules)) continue;
+    const keys = envKeys.filter((k) => k.group === group);
+    if (!keys.length) continue;
+    lines.push(ENV_GROUP_HEADING[group]);
+    for (const k of keys) {
+      lines.push(`${render(k.key, vars)}=          # ${render(k.comment, vars)}`);
+    }
+    lines.push("");
+  }
+  return lines.join("\n").replace(/\n+$/, "\n");
+}
+
+/** Ensure `.env` is git-ignored (idempotent). */
+function ensureGitignore(projectRoot: string, dryRun: boolean): void {
+  if (dryRun) return;
+  const gi = join(projectRoot, ".gitignore");
+  const existing = existsSync(gi) ? readFileSync(gi, "utf8") : "";
+  const has = existing.split(/\r?\n/).some((l) => l.trim() === ".env");
+  if (has) return;
+  const prefix = existing.length && !existing.endsWith("\n") ? "\n" : "";
+  writeFileSync(gi, `${existing}${prefix}.env\n`, "utf8");
+}
+
+/**
+ * Generate `.env.example` from the kit's envKeys. Skipped entirely when no
+ * secret-bearing module (mcp/jira) is enabled. template-once: never clobbers a
+ * user's existing file. Also ensures `.env` is git-ignored.
+ */
+function applyEnvArtifact(
+  a: Artifact,
+  kit: KitManifest,
+  modules: string[],
+  ctx: EnvCtx,
+): FileResult | null {
+  if (!modules.includes("mcp") && !modules.includes("jira")) return null;
+
+  const destRel = a.dest ?? ".env.example";
+  const abs = join(ctx.projectRoot, destRel);
+  const content = buildEnvExample(kit.envKeys, modules, ctx.vars);
+
+  ensureGitignore(ctx.projectRoot, ctx.dryRun);
+
+  if (existsSync(abs) && !ctx.force) {
+    trackRaw(ctx.nextFiles, destRel, readFileSync(abs, "utf8"), a.id, a.strategy);
+    return { path: destRel, action: "skipped", note: "exists" };
+  }
+  const action: ArtifactAction = existsSync(abs) ? "updated" : "created";
+  writeFile(abs, content, false, ctx.dryRun);
+  trackRaw(ctx.nextFiles, destRel, content, a.id, a.strategy);
+  return { path: destRel, action };
 }
 
 interface FileCtx {
@@ -438,7 +584,9 @@ function applyRulesArtifact(a: Artifact, allFiles: ResolvedFile[], ctx: RulesCtx
   // Fresh: render the full template, inject the block wrapped in sentinels.
   const fullRaw = readFileSync(kitPath(a.fullSrc as string), "utf8");
   const managed = `${profile.sentinelBegin}\n${blockBody.trim()}\n${profile.sentinelEnd}`;
-  newContent = render(fullRaw, { ...vars, MANAGED_BLOCK: managed });
+  // Normalize trailing newlines to match the merge path (applyRulesBlockWithMarkers),
+  // so a subsequent `sync` sees byte-identical content and reports `unchanged`.
+  newContent = render(fullRaw, { ...vars, MANAGED_BLOCK: managed }).replace(/[\r\n]*$/, "\n");
   writeFileRaw(abs, newContent, ctx.dryRun);
   trackRaw(ctx.nextFiles, destRel, newContent, a.id, a.strategy);
   return { path: destRel, action: "created" };

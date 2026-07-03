@@ -4,15 +4,16 @@
  */
 
 import type { ParsedArgs } from "../index.js";
+import { flagString } from "../lib/args.js";
 import { readKitManifest } from "../lib/manifest.js";
-import { readSavedVars, readInstalledModules } from "../lib/config.js";
+import { readSavedVars, readInstalledModules, readSavedStack } from "../lib/config.js";
 import { withDerived } from "../lib/template.js";
 import { runApply } from "../lib/apply-run.js";
 import { error, heading, info } from "../lib/output.js";
 
 export async function getCommand(args: ParsedArgs, projectRoot: string): Promise<void> {
-  const type = args.flags.type as string | undefined;
-  const name = args.flags.name as string | undefined;
+  const type = flagString(args.flags.type);
+  const name = flagString(args.flags.name);
   const dryRun = Boolean(args.flags["dry-run"]);
   const force = Boolean(args.flags.force);
 
@@ -33,6 +34,7 @@ export async function getCommand(args: ParsedArgs, projectRoot: string): Promise
     vars,
     modules,
     select: { type, name },
+    stack: readSavedStack(projectRoot),
     dryRun,
     force,
   });

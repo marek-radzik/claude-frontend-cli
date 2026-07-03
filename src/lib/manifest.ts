@@ -18,7 +18,8 @@ export type Strategy =
   | "template"
   | "template-once"
   | "skip-if-exists"
-  | "rules-block";
+  | "rules-block"
+  | "env-file";
 
 export interface PlaceholderDef {
   key: string;
@@ -27,9 +28,25 @@ export interface PlaceholderDef {
   group: "core" | "jira";
 }
 
+export interface StackPreset {
+  id: string;
+  label: string;
+  excludeDocs: string[];
+  excludeSkills: string[];
+  libraries: string[];
+  techTable: [string, string][];
+}
+
+export interface EnvKey {
+  key: string;
+  group: "mcp" | "git" | "project" | "jira";
+  required: boolean;
+  comment: string;
+}
+
 export interface Artifact {
   id: string;
-  type: "doc" | "agent" | "settings" | "skill" | "rules" | "instruction" | "script";
+  type: "doc" | "agent" | "settings" | "skill" | "rules" | "instruction" | "script" | "mcp" | "env";
   layer: Layer;
   module?: string;
   strategy: Strategy;
@@ -46,7 +63,10 @@ export interface Artifact {
 export interface KitManifest {
   version: number;
   kitRepo: string;
+  defaultStack: string;
+  stacks: StackPreset[];
   placeholders: PlaceholderDef[];
+  envKeys: EnvKey[];
   derived: Record<string, string>;
   artifacts: Artifact[];
 }

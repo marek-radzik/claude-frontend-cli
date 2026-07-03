@@ -5,17 +5,20 @@
  */
 
 import type { ParsedArgs } from "../index.js";
+import { flagString, parseSet } from "../lib/args.js";
 import { detectProject } from "../lib/tool-detect.js";
 import { readKitManifest } from "../lib/manifest.js";
-import { collectVars } from "../lib/prompts.js";
-import { readSavedVars } from "../lib/config.js";
+import { collectStack, collectVars } from "../lib/prompts.js";
+import { readSavedVars, readSavedStack } from "../lib/config.js";
 import { runApply } from "../lib/apply-run.js";
 import { heading, info, success, warn } from "../lib/output.js";
 import { getProfile } from "../lib/tool-profile.js";
+import { printEnvSteps } from "../lib/env-steps.js";
 
 export async function initCommand(args: ParsedArgs, projectRoot: string): Promise<void> {
-  const toolId = (args.flags.tool as string) || undefined;
+  const toolId = flagString(args.flags.tool);
   const withJira = Boolean(args.flags["with-jira"]);
+  const noMcp = Boolean(args.flags["no-mcp"]);
   const dryRun = Boolean(args.flags["dry-run"]);
   const force = Boolean(args.flags.force);
   const yes = Boolean(args.flags.yes);
@@ -42,20 +45,30 @@ export async function initCommand(args: ParsedArgs, projectRoot: string): Promis
     }
   }
 
-  const modules = withJira ? ["jira"] : [];
+  const stack = await collectStack(kit, {
+    yes,
+    cliStack: flagString(args.flags.stack),
+    saved: readSavedStack(projectRoot),
+  });
+  const modules: string[] = [];
+  if (!noMcp) modules.push("mcp");
+  if (withJira) modules.push("jira");
+
   const vars = await collectVars(kit, {
     yes,
     includeJira: withJira,
     saved: readSavedVars(projectRoot),
+    preset: parseSet(args.flags.set),
   });
 
-  await runApply({ projectRoot, vars, modules, dryRun, force, toolId });
+  await runApply({ projectRoot, vars, modules, stack, dryRun, force, toolId });
 
   if (!dryRun) {
     success("Done.");
+    if (modules.includes("mcp") || modules.includes("jira")) printEnvSteps(kit, modules, vars);
     heading("Next steps");
     info("  1. Review CLAUDE.md and fill in .instructions/ for your project.");
-    info("  2. Commit .claude/, .docs/, .instructions/ and CLAUDE.md.");
+    info("  2. Commit .claude/, .docs/, .instructions/ and CLAUDE.md (NOT .env).");
     info("  3. Run  cfc doctor  to verify, or  cfc list  to see what's installed.");
   }
 }

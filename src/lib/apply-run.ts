@@ -21,6 +21,7 @@ export interface RunOptions {
   modules: string[];
   onlyArtifactIds?: string[];
   select?: { type?: string; name?: string };
+  stack?: string;
   dryRun: boolean;
   force: boolean;
   prune?: boolean;
@@ -46,6 +47,7 @@ export async function runApply(opts: RunOptions): Promise<WriteReport> {
       modules: opts.modules,
       onlyArtifactIds: opts.onlyArtifactIds,
       select: opts.select,
+      stack: opts.stack,
       dryRun: opts.dryRun,
       force: opts.force,
       resolver,

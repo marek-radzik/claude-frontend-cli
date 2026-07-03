@@ -6,7 +6,7 @@
 
 import type { ParsedArgs } from "../index.js";
 import { readKitManifest, readInstallManifest, KIT_VERSION } from "../lib/manifest.js";
-import { readSavedVars, readInstalledModules } from "../lib/config.js";
+import { readSavedVars, readInstalledModules, readSavedStack } from "../lib/config.js";
 import { withDerived } from "../lib/template.js";
 import { runApply } from "../lib/apply-run.js";
 import { error, heading, info } from "../lib/output.js";
@@ -31,5 +31,13 @@ export async function syncCommand(args: ParsedArgs, projectRoot: string): Promis
     info("Tip: run with --dry-run first to preview. Local edits trigger a prompt.");
   }
 
-  await runApply({ projectRoot, vars, modules, dryRun, force, prune: true });
+  await runApply({
+    projectRoot,
+    vars,
+    modules,
+    stack: readSavedStack(projectRoot),
+    dryRun,
+    force,
+    prune: true,
+  });
 }

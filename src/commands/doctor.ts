@@ -7,12 +7,15 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ParsedArgs } from "../index.js";
+import { flagString } from "../lib/args.js";
 import { detectProject } from "../lib/tool-detect.js";
 import {
   KIT_VERSION,
   contentHash,
   readInstallManifest,
+  readKitManifest,
 } from "../lib/manifest.js";
+import { render } from "../lib/template.js";
 import { getProfile } from "../lib/tool-profile.js";
 import { extractBlockBody } from "../lib/sentinel.js";
 import { heading, info, success, warn } from "../lib/output.js";
@@ -24,7 +27,7 @@ function check(ok: boolean, label: string, detail = ""): void {
 }
 
 export async function doctorCommand(args: ParsedArgs, projectRoot: string): Promise<void> {
-  const toolId = (args.flags.tool as string) || undefined;
+  const toolId = flagString(args.flags.tool);
   const profile = getProfile(toolId);
   const state = detectProject(projectRoot, toolId);
   const manifest = readInstallManifest(projectRoot);
@@ -64,6 +67,19 @@ export async function doctorCommand(args: ParsedArgs, projectRoot: string): Prom
     if (drift === 0 && missing === 0) success("all tracked files match the kit");
     if (drift > 0) warn(`${drift} file(s) modified locally (sync will prompt)`);
     if (missing > 0) warn(`${missing} tracked file(s) missing (sync will recreate)`);
+
+    // Required secrets present in the environment (values never printed).
+    const kit = readKitManifest();
+    const groupEnabled = (g: string) =>
+      g === "git" || g === "project" ? true : manifest.modules.includes(g);
+    const requiredEnv = kit.envKeys.filter((k) => k.required && groupEnabled(k.group));
+    if (requiredEnv.length) {
+      heading("Required secrets (env)");
+      for (const k of requiredEnv) {
+        const name = render(k.key, manifest.vars);
+        check(Boolean(process.env[name]), name, process.env[name] ? "set" : "not set — see .env");
+      }
+    }
 
     const stale = manifest.kitVersion !== KIT_VERSION;
     if (stale) warn(`installed v${manifest.kitVersion} < kit v${KIT_VERSION} — run cfc sync`);

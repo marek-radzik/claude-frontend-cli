@@ -1,6 +1,6 @@
 {
   "name": "claude-frontend-cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Firmowy installer konfiguracji Claude Code dla projektów frontend (Nuxt/Vue/TS) — docs, skille, agent, settings i CLAUDE.md z jednej komendy.",
   "type": "module",
   "bin": {

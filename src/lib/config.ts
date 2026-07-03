@@ -15,3 +15,7 @@ export function readInstalledModules(projectRoot: string): string[] {
   const m = readInstallManifest(projectRoot);
   return m?.modules ?? [];
 }
+
+export function readSavedStack(projectRoot: string): string | undefined {
+  return readInstallManifest(projectRoot)?.vars?.STACK;
+}

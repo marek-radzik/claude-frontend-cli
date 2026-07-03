@@ -4,6 +4,7 @@
  */
 
 import { KIT_VERSION } from "./lib/manifest.js";
+import type { FlagValue } from "./lib/args.js";
 import { error, info } from "./lib/output.js";
 import { initCommand } from "./commands/init.js";
 import { getCommand } from "./commands/get.js";
@@ -14,22 +15,30 @@ import { doctorCommand } from "./commands/doctor.js";
 export interface ParsedArgs {
   command: string;
   positionals: string[];
-  flags: Record<string, string | boolean>;
+  flags: Record<string, FlagValue>;
 }
 
 function parse(argv: string[]): ParsedArgs {
   const positionals: string[] = [];
-  const flags: Record<string, string | boolean> = {};
+  const flags: Record<string, FlagValue> = {};
   for (let i = 0; i < argv.length; i++) {
     const tok = argv[i];
     if (tok.startsWith("-")) {
       const key = tok.replace(/^-+/, "");
       const next = argv[i + 1];
+      let value: string | boolean = true;
       if (next && !next.startsWith("-")) {
-        flags[key] = next;
+        value = next;
         i++;
+      }
+      // Repeated flags (e.g. --set) accumulate into an array.
+      const prev = flags[key];
+      if (prev === undefined) {
+        flags[key] = value;
+      } else if (Array.isArray(prev)) {
+        prev.push(String(value));
       } else {
-        flags[key] = true;
+        flags[key] = [String(prev), String(value)];
       }
     } else {
       positionals.push(tok);
@@ -43,15 +52,18 @@ const HELP = `cfc — claude-frontend-cli
 Firmowy installer konfiguracji Claude Code dla projektów frontend (Nuxt/Vue/TS).
 
 Usage:
-  cfc init [--with-jira] [--yes] [--dry-run] [--force] [--tool claude-code]
+  cfc init [--stack <id>] [--with-jira] [--no-mcp] [--yes] [--set KEY=VALUE ...] [--dry-run] [--force]
   cfc get --type <skill|doc|agent> --name <name> [--dry-run] [--force]
   cfc sync [--dry-run] [--force]
   cfc list
   cfc doctor
 
 Options:
+  --stack       Frontend stack preset (nuxt-vue | react | generic; default nuxt-vue)
   --with-jira   Include the optional Jira/sprint module
-  --yes         Non-interactive: keep {{placeholders}} for manual fill-in
+  --no-mcp      Skip the MCP config (.mcp.json) and env template
+  --yes         Non-interactive: keep {{placeholders}} unless provided via --set
+  --set K=V     Provide a value non-interactively (repeatable; e.g. --set PROJECT_NAME=Acme)
   --dry-run     Preview changes without writing
   --force       Overwrite local edits / existing config
   --tool        Target tool profile (default: claude-code)

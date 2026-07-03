@@ -1,74 +1,78 @@
 {
-  "$comment": "Declarative catalog of everything claude-frontend-cli (cfc) can install. The CLI reads this, filters by layer/flags, and applies each artifact via its strategy. Add a file to content/ + an entry here to extend the kit.",
-  "version": 1,
+  "$comment": "Declarative catalog of everything claude-frontend-cli (cfc) can install. The CLI reads this, filters by layer/flags/stack, and applies each artifact via its strategy. Add a file to content/ + an entry here to extend the kit.",
+  "version": 2,
   "kitRepo": "marek-radzik/claude-frontend-cli",
-  "placeholders": [
+  "defaultStack": "nuxt-vue",
+  "stacks": [
     {
-      "key": "PROJECT_NAME",
-      "prompt": "Project name",
-      "default": "My Frontend App",
-      "group": "core"
+      "id": "nuxt-vue",
+      "label": "Nuxt 3 + Vue 3 (PrimeVue / Pinia / Tailwind)",
+      "excludeDocs": [],
+      "excludeSkills": [],
+      "libraries": ["nuxt", "vue", "pinia", "primevue", "tailwindcss", "chart.js", "zod", "date-fns", "vue-router", "@vueuse/core"],
+      "techTable": [
+        ["Nuxt 3", "Framework"],
+        ["Vue 3", "UI Library"],
+        ["TypeScript", "Type Safety"],
+        ["Pinia", "State Management"],
+        ["PrimeVue", "UI Components"],
+        ["Tailwind CSS", "Styling"],
+        ["Zod", "Validation"],
+        ["Vitest", "Testing"],
+        ["i18n", "Internationalization"]
+      ]
     },
     {
-      "key": "API_BASE_URL",
-      "prompt": "Backend API base URL",
-      "default": "https://api.example.com",
-      "group": "core"
+      "id": "react",
+      "label": "React / Next.js",
+      "excludeDocs": ["TABLES", "FORMS", "COMPONENTS"],
+      "excludeSkills": ["new-form", "new-table", "new-feature"],
+      "libraries": ["react", "react-dom", "next", "react-router", "@tanstack/react-query", "zod", "tailwindcss", "date-fns"],
+      "techTable": [
+        ["React", "UI Library"],
+        ["Next.js", "Framework"],
+        ["TypeScript", "Type Safety"],
+        ["Zustand / Redux", "State Management"],
+        ["Tailwind CSS", "Styling"],
+        ["Zod", "Validation"],
+        ["Vitest", "Testing"]
+      ]
     },
     {
-      "key": "PRIMARY_ENTITY",
-      "prompt": "Primary domain entity (singular, e.g. Order)",
-      "default": "Entity",
-      "group": "core"
-    },
-    {
-      "key": "BRANCH_PREFIX",
-      "prompt": "Branch / commit-message prefix (e.g. ACME)",
-      "default": "TASK",
-      "group": "core"
-    },
-    {
-      "key": "JIRA_PROJECT",
-      "prompt": "Jira project key",
-      "default": "PROJ",
-      "group": "jira"
-    },
-    {
-      "key": "JIRA_BASE",
-      "prompt": "Jira base URL",
-      "default": "https://your-org.atlassian.net",
-      "group": "jira"
-    },
-    {
-      "key": "JIRA_BOARD",
-      "prompt": "Jira board id",
-      "default": "1",
-      "group": "jira"
-    },
-    {
-      "key": "JIRA_USER_NAME",
-      "prompt": "Your display name in Jira (assignee)",
-      "default": "Me",
-      "group": "jira"
-    },
-    {
-      "key": "GITLAB_URL",
-      "prompt": "GitLab base URL",
-      "default": "https://gitlab.example.com",
-      "group": "jira"
-    },
-    {
-      "key": "GITLAB_BACKEND_PATH",
-      "prompt": "GitLab backend repo path (group/repo)",
-      "default": "group/backend",
-      "group": "jira"
-    },
-    {
-      "key": "STAGING_HOST",
-      "prompt": "Staging/test server host",
-      "default": "staging.example.com",
-      "group": "jira"
+      "id": "generic",
+      "label": "Generic frontend (framework-agnostic)",
+      "excludeDocs": ["TABLES", "FORMS", "COMPONENTS"],
+      "excludeSkills": ["new-form", "new-table", "new-feature"],
+      "libraries": ["zod"],
+      "techTable": [
+        ["TypeScript", "Type Safety"],
+        ["Zod", "Validation"],
+        ["Vitest", "Testing"]
+      ]
     }
+  ],
+  "placeholders": [
+    { "key": "PROJECT_NAME", "prompt": "Project name", "default": "My Frontend App", "group": "core" },
+    { "key": "API_BASE_URL", "prompt": "Backend API base URL", "default": "https://api.example.com", "group": "core" },
+    { "key": "PRIMARY_ENTITY", "prompt": "Primary domain entity (singular, e.g. Order)", "default": "Entity", "group": "core" },
+    { "key": "BRANCH_PREFIX", "prompt": "Branch / commit-message prefix (e.g. ACME)", "default": "TASK", "group": "core" },
+    { "key": "JIRA_PROJECT", "prompt": "Jira project key", "default": "PROJ", "group": "jira" },
+    { "key": "JIRA_BASE", "prompt": "Jira base URL", "default": "https://your-org.atlassian.net", "group": "jira" },
+    { "key": "JIRA_BOARD", "prompt": "Jira board id", "default": "1", "group": "jira" },
+    { "key": "JIRA_USER_NAME", "prompt": "Your display name in Jira (assignee)", "default": "Me", "group": "jira" },
+    { "key": "GITLAB_URL", "prompt": "Git host base URL (for the Jira module's repo lookups)", "default": "https://gitlab.example.com", "group": "jira" },
+    { "key": "GITLAB_BACKEND_PATH", "prompt": "Backend repo path (group/repo)", "default": "group/backend", "group": "jira" },
+    { "key": "STAGING_HOST", "prompt": "Staging/test server host", "default": "staging.example.com", "group": "jira" }
+  ],
+  "envKeys": [
+    { "key": "CONTEXT7_API_KEY", "group": "mcp", "required": true, "comment": "https://context7.com -> API key (context7 MCP server)" },
+    { "key": "GIT_TOKEN", "group": "git", "required": false, "comment": "PAT for your git host API (GitLab/GitHub/...). GitHub users can instead run: gh auth login" },
+    { "key": "{{PROJECT_ENV_PREFIX}}_TOKEN", "group": "project", "required": false, "comment": "Bearer token for the {{PROJECT_NAME}} API (optional, add when needed)" },
+    { "key": "{{PROJECT_ENV_PREFIX}}_E2E_LOGIN", "group": "project", "required": false, "comment": "E2E login (optional)" },
+    { "key": "{{PROJECT_ENV_PREFIX}}_E2E_PASSWORD", "group": "project", "required": false, "comment": "E2E password (optional)" },
+    { "key": "JIRA_EMAIL", "group": "jira", "required": true, "comment": "Jira account e-mail" },
+    { "key": "JIRA_TOKEN", "group": "jira", "required": true, "comment": "Atlassian API token" },
+    { "key": "JIRA_USER_ID", "group": "jira", "required": true, "comment": "Your Jira accountId" }
   ],
   "derived": {
     "PRIMARY_ENTITY_LOWER": "lower(PRIMARY_ENTITY)",
@@ -129,6 +133,14 @@
       "dest": ".claude/skills/cfc-guide/SKILL.md"
     },
     {
+      "id": "cfc-setup",
+      "type": "skill",
+      "layer": "generic",
+      "strategy": "copy",
+      "src": "skills/cfc-setup/SKILL.md",
+      "dest": ".claude/skills/cfc-setup/SKILL.md"
+    },
+    {
       "id": "instructions",
       "type": "instruction",
       "layer": "template",
@@ -136,6 +148,22 @@
       "srcDir": "content/instructions",
       "destDir": ".instructions",
       "glob": "*.md"
+    },
+    {
+      "id": "mcp-config",
+      "type": "mcp",
+      "layer": "optional",
+      "module": "mcp",
+      "strategy": "template-once",
+      "src": "content/mcp/.mcp.json.tmpl",
+      "dest": ".mcp.json"
+    },
+    {
+      "id": "env-example",
+      "type": "env",
+      "layer": "generic",
+      "strategy": "env-file",
+      "dest": ".env.example"
     },
     {
       "id": "skills-jira",
